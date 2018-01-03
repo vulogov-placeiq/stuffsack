@@ -1,0 +1,60 @@
+#!/bin/sh
+
+SERVICE_NAME=presto
+DAEMON=presto
+DAEMON_OPTS=""
+PIDFILE=/tmp/presto.running
+
+if [ ! -x /usr/bin/curl ]; then
+  echo "ERROR: Can't execute curl."
+  exit 1
+fi
+
+start_service() {
+  echo  " * Starting $SERVICE_NAME... "
+  touch $PIDFILE
+  echo "done"
+}
+
+stop_service() {
+  echo  " * Stopping $SERVICE_NAME... "
+  if [ ! -f $PIDFILE ]; then
+     echo "* $SERVICE_NAME not started... "
+     exit 1
+  fi
+  curl -X PUT -H "Content-Type: application/json" -d '"SHUTTING_DOWN"' http://localhost:8080/v1/info/state 2>&1 > /dev/null
+  rm -f $PIDFILE
+  echo "done"
+}
+
+status_service() {
+    printf "%-50s" "Checking $SERVICE_NAME..."
+    if [ -f $PIDFILE ]; then
+        echo "Running"
+    else
+        printf "%s\n" "Service not running"
+        exit 3 
+    fi
+}
+
+case "$1" in
+  status)
+    status_service
+    ;;
+  start)
+    start_service
+    ;;
+  stop)
+    stop_service
+    ;;
+  restart)
+    stop_service
+    start_service
+    ;;
+  *)
+    echo "Usage: service $SERVICE_NAME {start|stop|restart|status}" >&2
+    exit 1   
+    ;;
+esac
+
+exit 0
